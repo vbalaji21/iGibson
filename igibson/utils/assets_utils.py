@@ -250,6 +250,7 @@ def get_scene_path(scene_id):
     :param scene_id: scene id
     :return: scene path for this scene_id
     """
+    print(scene_id)
     data_path = igibson.g_dataset_path
     assert scene_id in os.listdir(data_path) or scene_id == "stadium", "Scene {} does not exist".format(scene_id)
     return os.path.join(data_path, scene_id)
