@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 import logging
 import os
 
@@ -18,12 +18,13 @@ from std_msgs.msg import Header
 from igibson.envs.igibson_env import iGibsonEnv
 
 
-class SimNode:
+class SimNode(object):
     def __init__(self):
         rospy.init_node("igibson_sim")
         rospack = rospkg.RosPack()
         path = rospack.get_path("igibson-ros")
-        config_filename = os.path.join(path, "turtlebot_rgbd.yaml")
+        config_filename = os.path.join(path, "turtlebot_static_nav.yaml")
+        # config_filename = os.path.join(path, "fetch_motion_planning.yaml")
 
         self.cmdx = 0.0
         self.cmdy = 0.0
@@ -43,7 +44,7 @@ class SimNode:
         self.br = tf.TransformBroadcaster()
 
         self.env = iGibsonEnv(
-            config_file=config_filename, mode="headless", action_timestep=1 / 30.0
+            config_file=config_filename,mode="gui_non_interactive", use_pb_gui=True, action_timestep=1 / 30.0
         )  # assume a 30Hz simulation
         self.env.reset()
 
@@ -52,6 +53,7 @@ class SimNode:
     def run(self):
         while not rospy.is_shutdown():
             obs, _, _, _ = self.env.step([self.cmdx, self.cmdy])
+            #print("in step: ",self.cmdx,self.cmdy)
             rgb = (obs["rgb"] * 255).astype(np.uint8)
             normalized_depth = obs["depth"].astype(np.float32)
             depth = normalized_depth * self.env.sensors["vision"].depth_high
@@ -139,8 +141,8 @@ class SimNode:
                 odom_msg.pose.pose.orientation.w,
             ) = tf.transformations.quaternion_from_euler(0, 0, odom[-1][-1])
 
-            odom_msg.twist.twist.linear.x = (self.cmdx + self.cmdy) * 5
-            odom_msg.twist.twist.angular.z = (self.cmdy - self.cmdx) * 5 * 8.695652173913043
+            odom_msg.twist.twist.linear.x = self.cmdx #(self.cmdx + self.cmdy) * 5
+            odom_msg.twist.twist.angular.z = self.cmdy #(self.cmdy - self.cmdx) * 5 * 8.695652173913043
             self.odom_pub.publish(odom_msg)
 
             # Ground truth pose
@@ -162,13 +164,14 @@ class SimNode:
                 gt_pose_msg.pose.pose.orientation.w,
             ) = tf.transformations.quaternion_from_euler(rpy[0], rpy[1], rpy[2])
 
-            gt_pose_msg.twist.twist.linear.x = (self.cmdx + self.cmdy) * 5
-            gt_pose_msg.twist.twist.angular.z = (self.cmdy - self.cmdx) * 5 * 8.695652173913043
+            gt_pose_msg.twist.twist.linear.x = self.cmdx  #(self.cmdx + self.cmdy) * 5
+            gt_pose_msg.twist.twist.angular.z = self.cmdy #(self.cmdy - self.cmdx) * 5 * 8.695652173913043
             self.gt_pose_pub.publish(gt_pose_msg)
 
     def cmd_callback(self, data):
-        self.cmdx = data.linear.x / 10.0 - data.angular.z / (10 * 8.695652173913043)
-        self.cmdy = data.linear.x / 10.0 + data.angular.z / (10 * 8.695652173913043)
+        self.cmdx =  data.linear.x # / 10.0 - data.angular.z / (10 * 8.695652173913043)
+        self.cmdy =  data.angular.z #/ 10.0 + data.angular.z / (10 * 8.695652173913043)
+        # print(data)
 
     def tp_robot_callback(self, data):
         rospy.loginfo("Teleporting robot")
