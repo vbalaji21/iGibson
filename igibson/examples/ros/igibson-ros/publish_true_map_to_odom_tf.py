@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # ROS node to publish the true map from odom transform (map -> odom)
 # using the ground truth location provided by gazebo and the
@@ -64,8 +64,8 @@ def getMatrixInverse(m):
             cofactorRow.append(((-1) ** (r + c)) * getMatrixDeternminant(minor))
         cofactors.append(cofactorRow)
     cofactors = transposeMatrix(cofactors)
-    for r in range(len(cofactors)):
-        for c in range(len(cofactors)):
+    for r in range(len(list(cofactors))):
+        for c in range(len(list(cofactors))):
             cofactors[r][c] = cofactors[r][c] / determinant
     return cofactors
 
@@ -105,12 +105,12 @@ class TrueMapOdomNode:
         map_from_world_tup = None
         last_check = rospy.Time.now()
         while map_from_world_tup is None:
-            rospy.sleep(0.1)
+            rospy.sleep(0.01)
 
             try:
-                self.tf_listener.waitForTransform(self.map_frame, self.world_frame, rospy.Time(0), rospy.Duration(0.1))
+                self.tf_listener.waitForTransform(self.map_frame, self.world_frame, rospy.Time(0), rospy.Duration(1.0))
                 map_from_world_tup = self.tf_listener.lookupTransform(
-                    self.map_frame, self.world_frame, rospy.Time.now()
+                    self.map_frame, self.world_frame, rospy.Time(0)
                 )
 
                 t_map_from_world, q_map_from_world = map_from_world_tup
