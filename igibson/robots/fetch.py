@@ -159,6 +159,7 @@ class Fetch(ManipulationRobot, TwoWheelRobot, ActiveCameraRobot):
 
     def _actions_to_control(self, action):
         # Run super method first
+        print(action)
         u_vec, u_type_vec = super()._actions_to_control(action=action)
 
         # Override trunk value if we're keeping the trunk rigid
