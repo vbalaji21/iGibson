@@ -2,6 +2,7 @@ from igibson.robots.active_camera_robot import ActiveCameraRobot
 from igibson.robots.ant import Ant
 from igibson.robots.behavior_robot import BehaviorRobot
 from igibson.robots.fetch import Fetch
+from igibson.robots.fetch_base import FetchBase
 from igibson.robots.freight import Freight
 from igibson.robots.husky import Husky
 from igibson.robots.jr2 import JR2
