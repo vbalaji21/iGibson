@@ -159,7 +159,6 @@ class Fetch(ManipulationRobot, TwoWheelRobot, ActiveCameraRobot):
 
     def _actions_to_control(self, action):
         # Run super method first
-        print(action)
         u_vec, u_type_vec = super()._actions_to_control(action=action)
 
         # Override trunk value if we're keeping the trunk rigid
@@ -226,7 +225,7 @@ class Fetch(ManipulationRobot, TwoWheelRobot, ActiveCameraRobot):
 
     @property
     def default_joint_pos(self):
-        return self.untucked_default_joint_pos
+        return self.tucked_default_joint_pos
 
     @property
     def wheel_radius(self):
@@ -267,7 +266,7 @@ class Fetch(ManipulationRobot, TwoWheelRobot, ActiveCameraRobot):
         """
         :return Array[int]: Indices in low-level control vector corresponding to [Left, Right] wheel joints.
         """
-        return np.array([0, 1])
+        return np.array([1, 0])
 
     @property
     def trunk_control_idx(self):
