@@ -52,7 +52,11 @@ class SimNode(object):
 
     def run(self):
         while not rospy.is_shutdown():
-            obs, _, _, _ = self.env.step([self.cmdx, self.cmdy])
+            action = np.zeros(11)
+            # [self.cmdx, self.cmdy]
+            action[0] = self.cmdx
+            action[1] = self.cmdy
+            obs, _, _, _ = self.env.step(action)
             #print("in step: ",self.cmdx,self.cmdy)
             rgb = (obs["rgb"] * 255).astype(np.uint8)
             normalized_depth = obs["depth"].astype(np.float32)
