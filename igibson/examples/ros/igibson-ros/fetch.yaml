@@ -1,6 +1,6 @@
 # scene
 scene: gibson
-scene_id: Adrian
+scene_id: Avonia #Adrian
 build_graph: true
 load_texture: true
 pybullet_load_texture: true
@@ -41,7 +41,7 @@ robot:
 
 
 # task
-task: point_nav_fixed                                                                                  
+task: social_nav_random   #point_nav_random                                                                                  
 initial_pos: [0.0, 0.0, 0.0]                                                                           
 initial_orn: [0.0, 0.0, 0.0] 
 #task: point_nav_random

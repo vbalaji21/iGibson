@@ -1,5 +1,8 @@
 from abc import ABCMeta, abstractmethod
 
+import os
+import igibson
+
 import numpy as np
 import pybullet as p
 from future.utils import with_metaclass

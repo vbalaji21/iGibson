@@ -16,6 +16,8 @@ from sensor_msgs.msg import PointCloud2
 from std_msgs.msg import Header
 
 from igibson.envs.igibson_env import iGibsonEnv
+from cohan_msgs.msg import TrackedAgents, TrackedAgent, TrackedSegment, TrackedSegmentType, AgentType
+from igibson.tasks.social_nav_random_task import SocialNavRandomTask
 
 
 class SimNode(object):
@@ -36,6 +38,36 @@ class SimNode(object):
         self.odom_pub = rospy.Publisher("/odom", Odometry, queue_size=10)
         self.gt_pose_pub = rospy.Publisher("/ground_truth_odom", Odometry, queue_size=10)
         self.camera_info_pub = rospy.Publisher("/gibson_ros/camera/depth/camera_info", CameraInfo, queue_size=10)
+
+ 
+ 
+#TODO: Add CoHAN ROS bridge to send pedestrian position and twists  
+ 
+#         tracked_agents = TrackedAgents()
+#         self.num_ped = 4 #SocialNavRandomTask(self).read_num_pedestrians(self)
+#         for agent_id in range(1,self.num_ped+1):  #TODO:fins number of humans 
+# #            if self.ns == "human"+str(agent_id):
+# #                continue
+#             agent_segment = TrackedSegment()
+#             self.Segment_Type = TrackedSegmentType.TORSO
+#             agent_segment.type = self.Segment_Type
+#             self.task = SocialNavRandomTask(self)
+#             agent_segment.pose.pose, agent_segment.twist.twist = self.task.read_ped_next_pos(self)    #msg[agent_id-1].pose.pose         #TODO:data of human
+#             #agent_segment.twist.twist  #= msg[agent_id-1].twist.twist     #TODO:twist of human
+#             tracked_agent = TrackedAgent()     
+#             tracked_agent.type = AgentType.HUMAN
+#             tracked_agent.name = "human"+str(agent_id)
+#             tracked_agent.segments.append(agent_segment)
+#             tracked_agents.agents.append(tracked_agent)
+# #        if(tracked_agents.agents):
+# #            self.agents = tracked_agents
+# #            self.sig_1 = True
+
+#         #Add a publisher to publish the human torso pose and twist to ROS
+#         self.pedestrian_ros_bridge = rospy.Publisher("tracked_agents", TrackedAgents, queue_size=10)
+
+
+
 
         rospy.Subscriber("/mobile_base/commands/velocity", Twist, self.cmd_callback)
         rospy.Subscriber("/reset_pose", PoseStamped, self.tp_robot_callback)
