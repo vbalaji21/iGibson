@@ -8,6 +8,14 @@ from igibson.utils.utils import l2_distance
 import pybullet as p
 import numpy as np
 import rvo2
+import math
+
+def normalize_theta(theta):
+  PI = math.pi
+  result = math.fmod(theta + PI, 2.0 * PI)
+  if result <= 0:
+    return result + PI
+  return result - PI
 
 
 class SocialNavRandomTask(PointNavRandomTask):
@@ -25,11 +33,13 @@ class SocialNavRandomTask(PointNavRandomTask):
         # Decide on how many pedestrians to load based on scene size
         # Each pixel is 0.01 square meter
         num_sqrt_meter = env.scene.floor_map[0].nonzero()[0].shape[0] / 100.0
-        print("\033[2;31;43m Passed floor map 0")
         self.num_sqrt_meter_per_ped = self.config.get(
             'num_sqrt_meter_per_ped', 8)
-        self.num_pedestrians = 7 #max(1, int(
+        self.num_pedestrians = 1#7 #max(1, int(
 #            num_sqrt_meter / self.num_sqrt_meter_per_ped))
+        self.current_pos = None
+        self.desired_vel = None
+        self.orientation = None
 
         """
         Parameters for our mechanism of preventing pedestrians to back up.
@@ -387,11 +397,25 @@ class SocialNavRandomTask(PointNavRandomTask):
             self.robot_orca_ped,
             tuple(env.robots[0].get_position()[0:2]))
 
+
+
         for i, (ped, orca_ped, waypoints) in \
                 enumerate(zip(self.pedestrians,
                               self.orca_pedestrians,
                               self.pedestrian_waypoints)):
-            current_pos = np.array(ped.get_position())
+            current_pos = np.array(ped.get_position())   #get this
+            current_yaw = ped.get_yaw()
+            orinetation = current_yaw
+            self.current_pos = current_pos
+            self.orientation = orinetation
+
+            # print("\033[2;31;43m print social nav step")
+            # print("\033[2;31;43m social nav pedestrian current position", i,  np.array(ped.get_position()))
+            # print("\033[2;31;43m self pedestrians \n", i,  self.pedestrians, ped)
+            # print("\033[2;31;43m self orca pedestrians", i,  self.orca_pedestrians, orca_ped)
+            # print("\033[2;31;43m self orca pedestrian way points \n", i,  self.pedestrian_waypoints, waypoints)
+
+            self.pedestrians, self.orca_pedestrians, self.pedestrian_waypoints,
 
             # Sample new waypoints if empty OR
             # if the pedestrian has stopped for self.num_steps_stop_thresh steps
@@ -410,10 +434,15 @@ class SocialNavRandomTask(PointNavRandomTask):
             yaw = np.arctan2(next_goal[1] - current_pos[1],
                              next_goal[0] - current_pos[0])
             ped.set_yaw(yaw)
+            omega = normalize_theta(yaw-current_yaw)
             desired_vel = next_goal - current_pos[0:2]
             desired_vel = desired_vel / \
                 np.linalg.norm(desired_vel) * self.orca_max_speed
             self.orca_sim.setAgentPrefVelocity(orca_ped, tuple(desired_vel))
+            self.desired_vel = [desired_vel[0],desired_vel[1], omega]
+
+            # print("\033[2;31;43m the desired velocity", desired_vel)
+            # print("\033[2;31;43m set orca desired velocity", self.orca_sim.setAgentPrefVelocity(orca_ped, tuple(desired_vel)))
 
         self.orca_sim.doStep()
 
@@ -430,7 +459,7 @@ class SocialNavRandomTask(PointNavRandomTask):
             if next_peds_stop_flag[i] is True:
                 # revert back ORCA sim pedestrian to the previous time step
                 self.num_steps_stop[i] += 1
-                print("\033[2;37;40m nd array \033[0;37;40m \n", pos_xyz[:2])
+                # print("\033[2;37;40m nd array \033[0;37;40m \n", pos_xyz[:2])
                 self.orca_sim.setAgentPosition(orca_pred, tuple(pos_xyz[:2]))
 #                print("\033[2;37;40m tuple \033[0;37;40m \n", tuple(pos_xyz[:2]))
             else:
@@ -506,7 +535,7 @@ class SocialNavRandomTask(PointNavRandomTask):
             prev_pos_xyz = ped.get_position()
             next_pos_xyz = np.array([pos_xy[0], pos_xy[1], prev_pos_xyz[2]])
 
-        print("read orca ped position", next_peds_pos_xyz)   
+        # print("read orca ped position", next_peds_pos_xyz)   
 
         read_yaw = ped.get_yaw() 
 

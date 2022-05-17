@@ -2,13 +2,20 @@ local_costmap:
    global_frame: map
    # robot_base_frame: base_footprint
    robot_base_frame: base_link
-   update_frequency: 5.0
-   publish_frequency: 2.0
+   update_frequency: 10.0
+   publish_frequency: 10.0
    static_map: false
    rolling_window: true
    width: 4.0
    height: 4.0
-   resolution: 0.05
+   resolution: 0.02 #0.05 #TODO: check the sensor resolution and set this
    plugins:
-    - {name: obstacle_layer,      type: "costmap_2d::VoxelLayer"}
+   #  - {name: obstacle_layer,      type: "costmap_2d::VoxelLayer"}
+    - {name: 2d_obstacle_layer,      type: "costmap_2d::ObstacleLayer"}
     - {name: inflation_layer,     type: "costmap_2d::InflationLayer"}
+    - {name: human_layer_static, type: "cohan_layers::StaticAgentLayer"}
+    - {name: human_layer_visible, type: "cohan_layers::AgentVisibilityLayer"}
+
+   human_layer_static:
+    robot_radius: 0.30 # Change this
+    agent_radius: 0.31

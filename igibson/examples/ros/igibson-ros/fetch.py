@@ -19,6 +19,13 @@ from igibson.envs.igibson_env import iGibsonEnv
 from cohan_msgs.msg import TrackedAgents, TrackedAgent, TrackedSegment, TrackedSegmentType, AgentType
 from igibson.tasks.social_nav_random_task import SocialNavRandomTask
 
+from rospy.impl.statistics import SubscriberStatisticsLogger
+
+from rospy.impl.registration import get_topic_manager, set_topic_manager, Registration, get_registration_listeners
+from rospy.impl.tcpros import get_tcpros_handler, DEFAULT_BUFF_SIZE
+from rospy.impl.tcpros_pubsub import QueuedConnection
+from tf.transformations import quaternion_from_euler
+
 
 class SimNode(object):
     def __init__(self):
@@ -39,32 +46,13 @@ class SimNode(object):
         self.gt_pose_pub = rospy.Publisher("/ground_truth_odom", Odometry, queue_size=10)
         self.camera_info_pub = rospy.Publisher("/gibson_ros/camera/depth/camera_info", CameraInfo, queue_size=10)
 
+        #TODO: Add CoHAN ROS bridge to send pedestrian position and twists  
  
- 
-#TODO: Add CoHAN ROS bridge to send pedestrian position and twists  
- 
-#         tracked_agents = TrackedAgents()
-#         self.num_ped = 4 #SocialNavRandomTask(self).read_num_pedestrians(self)
-#         for agent_id in range(1,self.num_ped+1):  #TODO:fins number of humans 
-# #            if self.ns == "human"+str(agent_id):
-# #                continue
-#             agent_segment = TrackedSegment()
-#             self.Segment_Type = TrackedSegmentType.TORSO
-#             agent_segment.type = self.Segment_Type
-#             self.task = SocialNavRandomTask(self)
-#             agent_segment.pose.pose, agent_segment.twist.twist = self.task.read_ped_next_pos(self)    #msg[agent_id-1].pose.pose         #TODO:data of human
-#             #agent_segment.twist.twist  #= msg[agent_id-1].twist.twist     #TODO:twist of human
-#             tracked_agent = TrackedAgent()     
-#             tracked_agent.type = AgentType.HUMAN
-#             tracked_agent.name = "human"+str(agent_id)
-#             tracked_agent.segments.append(agent_segment)
-#             tracked_agents.agents.append(tracked_agent)
-# #        if(tracked_agents.agents):
-# #            self.agents = tracked_agents
-# #            self.sig_1 = True
 
-#         #Add a publisher to publish the human torso pose and twist to ROS
-#         self.pedestrian_ros_bridge = rospy.Publisher("tracked_agents", TrackedAgents, queue_size=10)
+
+        #Add a publisher to publish the human torso pose and twist to ROS
+        self.tracked_agents_pub = rospy.Publisher("/tracked_agents", TrackedAgents, queue_size=10) 
+ 
 
 
 
@@ -78,6 +66,50 @@ class SimNode(object):
         self.env = iGibsonEnv(
             config_file=config_filename,mode="gui_non_interactive", use_pb_gui=True, action_timestep=1 / 30.0
         )  # assume a 30Hz simulation
+
+
+    #     self.num_hum = self.env.task.num_pedestrians
+    #     self.ns = None #ns_
+    #     self.tracked_agents_pub = []
+    #     self.Segment_Type = TrackedSegmentType.TORSO
+    #     self.agents = TrackedAgents()
+    #     self.robot = TrackedAgent()
+    #     self.sig_1 = False
+    #     self.sig_2 = False
+
+    #     tracked_agents = TrackedAgents()
+    #     for agent_id in range(1,self.num_hum+1):
+    #         if self.ns == "human"+str(agent_id):
+    #             continue
+    #         agent_segment = TrackedSegment()
+    #         agent_segment.type = self.Segment_Type
+    #         agent_segment.pose.pose = self.env.task.current_pos #msg[agent_id-1].pose.pose
+    # #        agent_segment.twist.twist = self.env.task.desired_vel #msg[agent_id-1].twist.twist
+    #         tracked_agent = TrackedAgent()
+    #         tracked_agent.type = AgentType.HUMAN
+    #         tracked_agent.name = "human"+str(agent_id)
+    #         tracked_agent.segments.append(agent_segment)
+    #         tracked_agents.agents.append(tracked_agent)
+    #     if(tracked_agents.agents):
+    #         self.agents = tracked_agents
+    #         self.sig_1 = True
+
+#        self.tracked_agents_pub.publish(self.agents)
+
+
+        self.num_hum = self.env.task.num_pedestrians
+        self.ns = None
+    #    self.tracked_agents_pub = []
+        self.Segment_Type = TrackedSegmentType.TORSO
+        self.agents = TrackedAgents()
+        self.robot = TrackedAgent()
+        self.sig_1 = False
+        self.sig_2 = False
+
+
+
+
+
         self.env.reset()
 
         self.tp_time = None
@@ -125,13 +157,85 @@ class SimNode(object):
             msg.header.frame_id = "camera_depth_optical_frame"
             self.camera_info_pub.publish(msg)
 
+
+            # tracked_agents = TrackedAgents()
+            self.num_hum = self.env.task.num_pedestrians
+            tracked_agents = TrackedAgents()
+            self.Segment_Type = TrackedSegmentType.TORSO
+
+
+            for agent_id in range(1,self.num_hum+1):
+
+                agent_segment = TrackedSegment()
+                agent_segment.type = self.Segment_Type
+                agent_segment.pose.pose.position.x = self.env.task.current_pos[0]
+                agent_segment.pose.pose.position.y = self.env.task.current_pos[1]
+                agent_segment.pose.pose.position.z = self.env.task.current_pos[2]
+                quat = quaternion_from_euler(0,0,self.env.task.orientation)
+                agent_segment.pose.pose.orientation.x = quat[0]
+                agent_segment.pose.pose.orientation.y = quat[1]
+                agent_segment.pose.pose.orientation.z = quat[2]
+                agent_segment.pose.pose.orientation.w = quat[3]
+                agent_segment.twist.twist.linear.x = self.env.task.desired_vel[0]
+                agent_segment.twist.twist.linear.y = self.env.task.desired_vel[1]
+                agent_segment.twist.twist.angular.z = self.env.task.desired_vel[2]
+
+                tracked_agent = TrackedAgent()
+                tracked_agent.type = AgentType.HUMAN
+                tracked_agent.name = "human"+str(agent_id)
+                tracked_agent.track_id = agent_id
+                tracked_agent.segments.append(agent_segment)
+                tracked_agents.agents.append(tracked_agent)
+            if(tracked_agents.agents):
+                self.agents = tracked_agents
+                self.agents.header.stamp = rospy.Time.now()
+                self.agents.header.frame_id = "map"
+                # print("\033[2;31;43m message type of orient \n", type(agent_segment.pose.pose.orientation))
+                # print("\033[2;31;43m message data of orient \n", agent_segment.pose.pose.orientation)
+                self.tracked_agents_pub.publish(tracked_agents)
+
+
+
+
+
+
+
+    #         self.num_hum = self.env.task.num_pedestrians
+    #         self.ns = None #ns_
+    #         self.tracked_agents_pub = []
+    #         self.Segment_Type = TrackedSegmentType.TORSO
+    #         self.agents = TrackedAgents()
+    #         self.robot = TrackedAgent()
+    #         self.sig_1 = False
+    #         self.sig_2 = False
+
+    #         tracked_agents = TrackedAgents()
+    #         for agent_id in range(1,self.num_hum+1):
+    #             if self.ns == "human"+str(agent_id):
+    #                 continue
+    #             agent_segment = TrackedSegment()
+    #             agent_segment.type = self.Segment_Type
+    #             agent_segment.pose.pose = self.env.task.current_pos #msg[agent_id-1].pose.pose
+    # #        agent_segment.twist.twist = self.env.task.desired_vel #msg[agent_id-1].twist.twist
+    #             tracked_agent = TrackedAgent()
+    #             tracked_agent.type = AgentType.HUMAN
+    #             tracked_agent.name = "human"+str(agent_id)
+    #             tracked_agent.segments.append(agent_segment)
+    #             tracked_agents.agents.append(tracked_agent)
+    #         if(tracked_agents.agents):
+    #             self.agents = tracked_agents
+    #             self.sig_1 = True
+
+    #        self.tracked_agents_pub.publish(tracked_agents)
+
+
             if (self.tp_time is None) or (
                 (self.tp_time is not None) and ((rospy.Time.now() - self.tp_time).to_sec() > 1.0)
             ):
                 scan = obs["scan"]
                 lidar_header = Header()
                 lidar_header.stamp = now
-                lidar_header.frame_id = "scan_link"
+                lidar_header.frame_id = "laser_link"
 
                 laser_linear_range = self.env.sensors["scan_occ"].laser_linear_range
                 laser_angular_range = self.env.sensors["scan_occ"].laser_angular_range

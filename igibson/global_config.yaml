@@ -1,5 +1,5 @@
 assets_path: /local/users/vvigneshba/iGibson_assets_datasets/data/assets # put either absolute path or relative to current directory
-g_dataset_path: /local/users/vvigneshba/iGibson_assets_datasets/data/gibson_v2_selected    #g_dataset
+g_dataset_path: /local/users/vvigneshba/iGibson_assets_datasets/data/gibson_v2_all_full_572_scenes/gibson_v2    #g_dataset
 ig_dataset_path: /local/users/vvigneshba/iGibson_assets_datasets/data/ig_dataset/ig_dataset
 threedfront_dataset_path: data/threedfront_dataset
 cubicasa_dataset_path: data/cubicasa_dataset
