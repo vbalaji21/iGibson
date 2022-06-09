@@ -16,8 +16,10 @@
 
   <node name="stage_joints" pkg="igibson-ros" type="stage_joints.py"/>
 
-  <node name="fetch_gibson_sim" pkg="igibson-ros" type="fetch.py" output="screen">
-  </node>
+  <!-- <node name="human_teleop" pkg="igibson-ros" type="human_teleop_subscriber.py" output="screen"/> -->
+
+  <!-- <node name="fetch_gibson_sim" pkg="igibson-ros" type="fetch.py" output="screen">
+  </node> -->
   
   <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
     <param name="publish_frequency" type="double" value="50.0" />
@@ -73,8 +75,8 @@
       angle_max: 1.91986
       angle_increment: 0.0087
       scan_time: 0.3333
-      range_min: 0.45
-      range_max: 10.0
+      range_min: 0.25  <!-- 0.45 -->
+      range_max: 5.0   <!-- 10.0 -->
       use_inf: true
       
       #concurrency_level affects number of pc queued for processing and the number of threadsused
@@ -85,7 +87,18 @@
     </rosparam>
   </node>
 
-  <!-- <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+<!-- Joy Teleop node -->
+  <rosparam file="$(find igibson-ros)/param/joystick_param.yaml" command="load" /> 
+  <node name="joy_teleop_node" pkg="joy_teleop" type="joy_teleop.py" />
+
+<!-- clearing costmap -->
+  <node pkg="igibson-ros" type="clear_costmap.py" name="clear_costmap"/>
+
+<!-- Goal data, time taken and human robot distance -->
+  <!-- <node pkg="igibson-ros" type="goal_data_script.py" name="goal_data_publisher"/> -->
+
+<!-- comment for using cohan -->
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
     <rosparam file="$(find igibson-ros)/param/costmap_common_params.yaml" command="load" ns="global_costmap" />
     <rosparam file="$(find igibson-ros)/param/costmap_common_params.yaml" command="load" ns="local_costmap" />
     <rosparam file="$(find igibson-ros)/param/local_costmap_params.yaml" command="load" />
@@ -93,7 +106,8 @@
     <rosparam file="$(find igibson-ros)/param/gt_navigation/dwa_local_planner_params.yaml" command="load" />
     <rosparam file="$(find igibson-ros)/param/move_base_params.yaml" command="load" />
     <rosparam file="$(find igibson-ros)/param/global_planner_params.yaml" command="load" />
-    <rosparam file="$(find igibson-ros)/param/navfn_global_planner_params.yaml" command="load" /> -->
+    <rosparam file="$(find igibson-ros)/param/navfn_global_planner_params.yaml" command="load" />
+
     <!-- external params file that could be loaded into the move_base namespace -->
     <!-- <rosparam file="$(arg custom_param_file)" command="load" /> -->
 
@@ -104,10 +118,10 @@
     <param name="local_costmap/robot_base_frame" value="$(arg base_frame_id)"/>
     <param name="DWAPlannerROS/global_frame_id" value="$(arg odom_frame_id)"/> -->
 
-    <!-- <remap from="cmd_vel" to="navigation_velocity_smoother/raw_cmd_vel"/>
+    <remap from="cmd_vel" to="navigation_velocity_smoother/raw_cmd_vel"/>
     <remap from="odom" to="$(arg odom_topic)"/>
     <remap from="scan" to="$(arg laser_topic)"/>
-  </node> -->
+  </node>
 
   <node pkg="nodelet" type="nodelet" args="manager"
         name="record_player_manager" output="screen"/>
