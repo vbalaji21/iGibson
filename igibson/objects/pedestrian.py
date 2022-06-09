@@ -6,13 +6,14 @@ import igibson
 from igibson.objects.stateful_object import StatefulObject
 import numpy as np
 
+human_body_id = 0
 
 class Pedestrian(StatefulObject):
     """
     Pedestiran object
     """
 
-    def __init__(self, style="standing", pos=[0, 0, 0], scale=1.0, visual_only=True, **kwargs):
+    def __init__(self, style="standing", pos=[0, 0, 0], scale=1.0, visual_only=False, **kwargs):     # Make visual_only = False to include collision properties
         super(Pedestrian, self).__init__(**kwargs)
         self.collision_filename = os.path.join(
             igibson.assets_path, "models", "person_meshes", "person_{}".format(style), "meshes", "person_vhacd.obj"
@@ -23,7 +24,8 @@ class Pedestrian(StatefulObject):
 
         self.visual_only = visual_only
         self.scale = scale
-        self.default_orn_euler = np.array([np.pi / 2.0, 0.0, np.pi / 2.0])
+        self.default_orn_euler = [1.571, -1.571, 0] # np.array([np.pi / 2.0, 0.0, np.pi / 2.0])
+#        print("\033[0;31m default euler angles \033[0m\n", self.default_orn_euler)
         self.cid = None
         self.pos = pos
 
@@ -31,6 +33,8 @@ class Pedestrian(StatefulObject):
         """
         Load the object into pybullet
         """
+        global human_body_id
+
         collision_id = p.createCollisionShape(p.GEOM_MESH, fileName=self.collision_filename, meshScale=[self.scale] * 3)
         visual_id = p.createVisualShape(p.GEOM_MESH, fileName=self.visual_filename, meshScale=[self.scale] * 3)
         #body_id = p.createMultiBody(
@@ -45,7 +49,8 @@ class Pedestrian(StatefulObject):
                                         baseCollisionShapeIndex=collision_id,
                                         baseVisualShapeIndex=visual_id)
 
-        p.resetBasePositionAndOrientation(self.body_id, self.pos, p.getQuaternionFromEuler(self.default_orn_euler))  #[-0.5, -0.5, -0.5, 0.5])
+        human_body_id = self.body_id                           #right combination x =90 deg to stand  up and Y= 90 to face robot. We can change Y for turning around
+        p.resetBasePositionAndOrientation(self.body_id, [-0.10165582597255707, 1.2751039266586304, -0.001434326171875], (0.5,-0.5,-0.5,0.5)) # self.pos # p.getQuaternionFromEuler(self.default_orn_euler))  #[-0.5, -0.5, -0.5, 0.5])
 #        self.cid = p.createConstraint(
 #            body_id,
 #            -1,
@@ -67,9 +72,8 @@ class Pedestrian(StatefulObject):
                        self.default_orn_euler[1],
                        self.default_orn_euler[2] + yaw]
         pos, _ = p.getBasePositionAndOrientation(self.body_id)
-        p.resetBasePositionAndOrientation(
-            self.body_id, pos, p.getQuaternionFromEuler(euler_angle)
-        )
+#        p.resetBasePositionAndOrientation(
+#            self.body_id, pos, p.getQuaternionFromEuler(euler_angle))
 
     def get_yaw(self):
         quat_orientation = super().get_orientation()
@@ -85,3 +89,18 @@ class Pedestrian(StatefulObject):
         Reset pedestrian position and orientation by changing constraint
         """
         p.changeConstraint(self.cid, pos, orn)
+
+    def set_velocity(self, linear_velocity, angular_velocity):
+        global human_body_id 
+        p.resetBaseVelocity(human_body_id , linear_velocity, angular_velocity)
+
+
+    def get_velocity(self):
+        """Get object bodies' velocity in the format of List[Tuple[Array[vx, vy, vz], Array[wx, wy, wz]]]"""
+        #velocities = []
+        global human_body_id 
+        #for body_id in self.get_body_ids():
+        lin, ang = p.getBaseVelocity(human_body_id) #(body_id)
+        #velocities.append((np.array(lin), np.array(ang)))
+
+        return lin, ang
