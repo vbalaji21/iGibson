@@ -410,7 +410,7 @@ class iGibsonEnv(BaseEnv):
         """
         is_robot = isinstance(obj, BaseRobot)
 
-        self.set_pos_orn_with_z_offset(obj, pos, orn)
+#        self.set_pos_orn_with_z_offset(obj, pos, orn)               # commented to have freedom in landing of the robot
 
         if is_robot:
             obj.reset()
@@ -429,7 +429,7 @@ class iGibsonEnv(BaseEnv):
         """
         is_robot = isinstance(obj, BaseRobot)
 
-        self.set_pos_orn_with_z_offset(obj, pos, orn)
+#        self.set_pos_orn_with_z_offset(obj, pos, orn)               # commented to have freedom in landing of the robot
 
         if is_robot:
             obj.reset()
@@ -478,8 +478,8 @@ class iGibsonEnv(BaseEnv):
         Reset episode.
         """
         self.randomize_domain()
-        # Move robot away from the scene.
-        self.robots[0].set_position([100.0, 100.0, 100.0])
+        # Move robot away from the scene.                 # setting initial position of the robot
+        self.robots[0].set_position([-0.663719892501831 , -1.626983404159546, 0.002532958984375]) # [-3.8169119358062744, -6.734062194824219, 0.002471923828125]    # kingfisher [-19.0,14.0,0]      #[-13.881997108459473, 6.0127272605896, -0.005340576171875])     #([100.0, 100.0, 100.0]) #TODO: robot_init_position
         self.task.reset(self)
         self.simulator.sync(force_sync=True)
         state = self.get_state()
