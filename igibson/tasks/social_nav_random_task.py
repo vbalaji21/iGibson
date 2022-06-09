@@ -33,6 +33,7 @@ class SocialNavRandomTask(PointNavRandomTask):
         # Decide on how many pedestrians to load based on scene size
         # Each pixel is 0.01 square meter
         num_sqrt_meter = env.scene.floor_map[0].nonzero()[0].shape[0] / 100.0
+        #print("$blue" "num of sq meters",num_sqrt_meter)
         self.num_sqrt_meter_per_ped = self.config.get(
             'num_sqrt_meter_per_ped', 8)
         self.num_pedestrians = 1#7 #max(1, int(
@@ -40,6 +41,7 @@ class SocialNavRandomTask(PointNavRandomTask):
         self.current_pos = None
         self.desired_vel = None
         self.orientation = None
+        self.max_omega_speed = None
 
         """
         Parameters for our mechanism of preventing pedestrians to back up.
@@ -111,7 +113,8 @@ class SocialNavRandomTask(PointNavRandomTask):
         self.time_horizon = self.config.get('orca_time_horizon', 2.0)
         self.time_horizon_obst = self.config.get('orca_time_horizon_obst', 2.0)
         self.orca_radius = self.config.get('orca_radius', 0.5)
-        self.orca_max_speed = self.config.get('orca_max_speed', 0.5)
+        self.orca_max_speed = self.config.get('orca_max_speed', 0.0)  #given value 0.5 changin it to same speed as robot
+        self.max_omega_speed = 0
 
         self.orca_sim = rvo2.PyRVOSimulator(
             env.action_timestep,
@@ -226,7 +229,7 @@ class SocialNavRandomTask(PointNavRandomTask):
 
         self.orca_sim.processObstacles()
 
-    def sample_initial_pos(self, env, ped_id):
+    # def sample_initial_pos(self, env, ped_id):
         """
         Sample a new initial position for pedestrian with ped_id.
         The inital position is sampled randomly until the position is
@@ -234,29 +237,29 @@ class SocialNavRandomTask(PointNavRandomTask):
         positions and the robot's initial position.
         """
         # resample pedestrian's initial position
-        must_resample_pos = True
-        while must_resample_pos:
-            _, initial_pos = env.scene.get_random_point(
-                floor=self.floor_num)
-            must_resample_pos = False
+        # must_resample_pos = True
+        # while must_resample_pos:
+        #     _, initial_pos = env.scene.get_random_point(
+        #         floor=self.floor_num)
+        #     must_resample_pos = False
 
-            # If too close to the robot, resample
-            dist = np.linalg.norm(initial_pos[:2] - self.initial_pos[:2])
-            if dist < self.orca_radius:
-                must_resample_pos = True
-                continue
+        #     # If too close to the robot, resample
+        #     dist = np.linalg.norm(initial_pos[:2] - self.initial_pos[:2])
+        #     if dist < self.orca_radius:
+        #         must_resample_pos = True
+        #         continue
 
-            # If too close to the previous pedestrians, resample
-            for neighbor_id in range(ped_id):
-                neighbor_ped = self.pedestrians[neighbor_id]
-                neighbor_pos_xyz = neighbor_ped.get_position()
-                dist = np.linalg.norm(
-                    np.array(neighbor_pos_xyz)[:2] -
-                    initial_pos[:2])
-                if dist < self.orca_radius:
-                    must_resample_pos = True
-                    break
-        return initial_pos
+        #     # If too close to the previous pedestrians, resample
+        #     for neighbor_id in range(ped_id):
+        #         neighbor_ped = self.pedestrians[neighbor_id]
+        #         neighbor_pos_xyz = neighbor_ped.get_position()
+        #         dist = np.linalg.norm(
+        #             np.array(neighbor_pos_xyz)[:2] -
+        #             initial_pos[:2])
+        #         if dist < self.orca_radius:
+        #             must_resample_pos = True
+        #             break
+        # return initial_pos
 
     def reset_pedestrians(self, env):
         """
@@ -268,19 +271,21 @@ class SocialNavRandomTask(PointNavRandomTask):
         for ped_id, (ped, orca_ped) in enumerate(zip(self.pedestrians, self.orca_pedestrians)):
             if self.offline_eval:
                 episode_index = self.episode_config.episode_index
-                initial_pos = np.array(
-                    self.episode_config.episodes[episode_index]['pedestrians'][ped_id]['initial_pos'])
-                initial_orn = np.array(
-                    self.episode_config.episodes[episode_index]['pedestrians'][ped_id]['initial_orn'])
+                initial_pos = [-13.847393035888672, 14.284258842468262, -0.001434326171875] # np.array(
+                #    self.episode_config.episodes[episode_index]['pedestrians'][ped_id]['initial_pos'])
+                #initial_orn = (0, 0, 0, 1)# np.array(
+                    # self.episode_config.episodes[episode_index]['pedestrians'][ped_id]['initial_orn'])
                 waypoints = self.sample_new_target_pos(
                     env, initial_pos, ped_id)
             else:
-                initial_pos = self.sample_initial_pos(env, ped_id)
-                initial_orn = p.getQuaternionFromEuler(ped.default_orn_euler)
+                initial_pos = [-13.847393035888672, 14.284258842468262, -0.001434326171875]# self.sample_initial_pos(env, ped_id)
+                #initial_orn =  (0, 0, 0.707, 0.707) #p.getQuaternionFromEuler(ped.default_orn_euler)
                 waypoints = self.sample_new_target_pos(env, initial_pos)
 
-            ped.set_position_orientation(initial_pos, initial_orn)
-            self.orca_sim.setAgentPosition(orca_ped, tuple(initial_pos[0:2]))
+            #initial_pos = [-0.12189960479736328, -0.116485595703125, 0.0015554428100585938]
+            #initial_orn = (0, 0, 0, 1)
+            #ped.set_position_orientation(initial_pos, initial_orn)
+            #self.orca_sim.setAgentPosition(orca_ped, tuple(initial_pos[0:2]))
             self.pedestrian_waypoints.append(waypoints)
 
     def reset_agent(self, env):
@@ -294,18 +299,18 @@ class SocialNavRandomTask(PointNavRandomTask):
         if self.offline_eval:
             self.episode_config.reset_episode()
             episode_index = self.episode_config.episode_index
-            initial_pos = np.array(
-                self.episode_config.episodes[episode_index]['initial_pos'])
-            initial_orn = np.array(
-                self.episode_config.episodes[episode_index]['initial_orn'])
+            initial_pos =   [ -16.23610496520996, 12.187033653259277, -0.001434326171875]   #np.array(
+                # self.episode_config.episodes[episode_index]['initial_pos'])
+            initial_orn = (0, 0, 0, 1) # np.array(
+            #    self.episode_config.episodes[episode_index]['initial_orn'])
             target_pos = np.array(
                 self.episode_config.episodes[episode_index]['target_pos'])
             self.initial_pos = initial_pos
             self.target_pos = target_pos
-            env.robots[0].set_position_orientation(initial_pos, initial_orn)
 
-        self.orca_sim.setAgentPosition(self.robot_orca_ped,
-                                       tuple(self.initial_pos[0:2]))
+            #env.robots[0].set_position_orientation(initial_pos, initial_orn)
+
+        # self.orca_sim.setAgentPosition(self.robot_orca_ped, tuple(self.initial_pos[0:2]))
         self.reset_pedestrians(env)
         self.personal_space_violation_steps = 0
 
@@ -393,9 +398,9 @@ class SocialNavRandomTask(PointNavRandomTask):
         :param env: environment instance
         """
         super(SocialNavRandomTask, self).step(env)
-        self.orca_sim.setAgentPosition(
-            self.robot_orca_ped,
-            tuple(env.robots[0].get_position()[0:2]))
+        # self.orca_sim.setAgentPosition(
+        #     self.robot_orca_ped,
+        #     tuple(env.robots[0].get_position()[0:2]))
 
 
 
@@ -419,22 +424,24 @@ class SocialNavRandomTask(PointNavRandomTask):
 
             # Sample new waypoints if empty OR
             # if the pedestrian has stopped for self.num_steps_stop_thresh steps
-            if len(waypoints) == 0 or \
-                    self.num_steps_stop[i] >= self.num_steps_stop_thresh:
-                if self.offline_eval:
-                    waypoints = self.sample_new_target_pos(env, current_pos, i)
-                else:
-                    waypoints = self.sample_new_target_pos(env, current_pos)
-                self.pedestrian_waypoints[i] = waypoints
-                self.num_steps_stop[i] = 0
+
+            # if len(waypoints) == 0 or \
+            #         self.num_steps_stop[i] >= self.num_steps_stop_thresh:
+            #     if self.offline_eval:
+            #         waypoints = self.sample_new_target_pos(env, current_pos, i)
+            #     else:
+            #         waypoints = self.sample_new_target_pos(env, current_pos)
+            #     self.pedestrian_waypoints[i] = waypoints
+            #     self.num_steps_stop[i] = 0
 
             next_goal = waypoints[0]
             # self.pedestrian_goals[i].set_position(
             #     np.array([next_goal[0], next_goal[1], current_pos[2]]))
             yaw = np.arctan2(next_goal[1] - current_pos[1],
                              next_goal[0] - current_pos[0])
-            ped.set_yaw(yaw)
+            #ped.set_yaw(yaw)
             omega = normalize_theta(yaw-current_yaw)
+    #        omega = (omega/np.linalg.norm(omega)) * self.max_omega_speed # Added by me
             desired_vel = next_goal - current_pos[0:2]
             desired_vel = desired_vel / \
                 np.linalg.norm(desired_vel) * self.orca_max_speed
@@ -444,43 +451,44 @@ class SocialNavRandomTask(PointNavRandomTask):
             # print("\033[2;31;43m the desired velocity", desired_vel)
             # print("\033[2;31;43m set orca desired velocity", self.orca_sim.setAgentPrefVelocity(orca_ped, tuple(desired_vel)))
 
-        self.orca_sim.doStep()
+        # self.orca_sim.doStep()
 
-        next_peds_pos_xyz, next_peds_stop_flag = \
-            self.update_pos_and_stop_flags()
+        # next_peds_pos_xyz, next_peds_stop_flag = \
+        #     self.update_pos_and_stop_flags()
 
         # Update the pedestrian position in PyBullet if it does not stop
         # Otherwise, revert back the position in RVO2 simulator
-        for i, (ped, orca_pred, waypoints) in \
-                enumerate(zip(self.pedestrians,
-                              self.orca_pedestrians,
-                              self.pedestrian_waypoints)):
-            pos_xyz = next_peds_pos_xyz[i]
-            if next_peds_stop_flag[i] is True:
+        # for i, (ped, orca_pred, waypoints) in \
+        #         enumerate(zip(self.pedestrians,
+        #                       self.orca_pedestrians,
+        #                       self.pedestrian_waypoints)):
+        #     pos_xyz = next_peds_pos_xyz[i]
+        #     if next_peds_stop_flag[i] is True:
                 # revert back ORCA sim pedestrian to the previous time step
-                self.num_steps_stop[i] += 1
+                # self.num_steps_stop[i] += 1
                 # print("\033[2;37;40m nd array \033[0;37;40m \n", pos_xyz[:2])
-                self.orca_sim.setAgentPosition(orca_pred, tuple(pos_xyz[:2]))
-#                print("\033[2;37;40m tuple \033[0;37;40m \n", tuple(pos_xyz[:2]))
-            else:
-                # advance pybullet pedstrian to the current time step
-                self.num_steps_stop[i] = 0
-                ped.set_position(pos_xyz)
-                next_goal = waypoints[0]
-                if np.linalg.norm(next_goal - np.array(pos_xyz[:2])) \
-                        <= self.pedestrian_goal_thresh:
-                    waypoints.pop(0)
+#                self.orca_sim.setAgentPosition(orca_pred, tuple(pos_xyz[:2]))
+                # print("\033[2;37;40m tuple \033[0;37;40m \n", tuple(pos_xyz[:2]))
+            #     print("empty")
+            # else:
+                # # advance pybullet pedstrian to the current time step
+                # self.num_steps_stop[i] = 0
+                # # ped.set_position(pos_xyz)
+                # next_goal = waypoints[0]
+                # if np.linalg.norm(next_goal - np.array(pos_xyz[:2])) \
+                #         <= self.pedestrian_goal_thresh:
+                #     waypoints.pop(0)
 
         # Detect robot's personal space violation
-        personal_space_violation = False
-        robot_pos = env.robots[0].get_position()[:2]
-        for ped in self.pedestrians:
-            ped_pos = ped.get_position()[:2]
-            if l2_distance(robot_pos, ped_pos) < self.orca_radius:
-                personal_space_violation = True
-                break
-        if personal_space_violation:
-            self.personal_space_violation_steps += 1
+        # personal_space_violation = False
+        # robot_pos = env.robots[0].get_position()[:2]
+        # for ped in self.pedestrians:
+        #     ped_pos = ped.get_position()[:2]
+        #     if l2_distance(robot_pos, ped_pos) < self.orca_radius:
+        #         personal_space_violation = True
+        #         break
+        # if personal_space_violation:
+        #     self.personal_space_violation_steps += 1
 
 
     def update_pos_and_stop_flags(self):
