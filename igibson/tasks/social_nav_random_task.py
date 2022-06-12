@@ -8,7 +8,13 @@ from igibson.utils.utils import l2_distance
 import pybullet as p
 import numpy as np
 import rvo2
+import traceback # debug
 
+iteration_no = 0
+call_no = 0
+person_1_goal =  [[-1.78, 2.88, 0.00247], [1.88, 4.22, -0.00143], [1.84, 7.48, 0.00247], [4.65, 7.73, 0.00247], [1.84, 7.48, 0.00247], [1.88, 4.22, -0.00143]] # [[1.91, 0.791, -0.00143], [1.91, -1.87, -0.00143], [1.69, -4.61, -0.00534], [ 1.78, -8.46, -0.00143], [ 2.38, -5.97, -0.00143], [ 4.81, -5.05, -0.00143], [ 2.38, -5.97, -0.00143] , [ 1.78, -8.46, -0.00143], [1.69, -4.61, -0.00534], [1.91, -1.87, -0.00143] ]# [[0.714, 4.58, -0.00143],[ 3.95, 4.55, -0.00143],[ 7.41, 5.18, 0.00247]]
+person_2_goal =  [[2.14, 1.45, -0.00137],[-0.939, 3.29, -0.00143], [-1.23, 7.9, 0.00247], [-2.98, 8.05, 0.00247], [-1.23, 7.9, 0.00247], [-2.98, 8.05, 0.00247]]# [[1.98, 4.67, 0.00247], [1.35, 7.45, 0.00247], [ 1.31, 9.97, 0.00247], [ -1.33, 10.6, 0.00247], [ -0.942, 14.2, 0.00247], [ 3.96, 14.5, -0.00534], [ -0.942, 14.2, 0.00247], [ -1.33, 10.6, 0.00247], [ 1.31, 9.97, 0.00247], [1.35, 7.45, 0.00247]]# [[-1.14, 6.93, 0.00247],[ 0.324, 8.55, -0.00143],[ 3.96, 7.17, -0.00143]]
+person_3_goal =  [[0.16, 0.169, -0.00534], [-5.76, 0.0108, 0.00247], [-8.39, 0.227, 0.00247],[-8.75, 3.18, 0.00247], [-8.39, 0.227, 0.00247], [-5.76, 0.0108, 0.00247]] # [[-1.54, 5.32, 0.00247], [ -14.3, 9.03, 0.00247], [ 2.26, 10.7, 0.00247], [ 1.17, 12.9, 0.00247], [ 0.574, 14.7, 0.00247], [ -4.34, 13.7, 0.00247], [ 0.574, 14.7, 0.00247], [ 1.17, 12.9, 0.00247], [ 2.26, 10.7, 0.00247], [ -14.3, 9.03, 0.00247]]# [[-0.904, 0.0251, 0.00247],[-4.85 ,-0.557 , 0.00247],[-10.4 , 1.47, 0.00247]]
 
 class SocialNavRandomTask(PointNavRandomTask):
     """
@@ -28,8 +34,8 @@ class SocialNavRandomTask(PointNavRandomTask):
         print("\033[2;31;43m Passed floor map 0")
         self.num_sqrt_meter_per_ped = self.config.get(
             'num_sqrt_meter_per_ped', 8)
-        self.num_pedestrians = 7 #max(1, int(
-#            num_sqrt_meter / self.num_sqrt_meter_per_ped))
+        self.num_pedestrians = 3 # max(1, int(num_sqrt_meter / self.num_sqrt_meter_per_ped))
+        self.own_motion_data = True
 
         """
         Parameters for our mechanism of preventing pedestrians to back up.
@@ -101,7 +107,7 @@ class SocialNavRandomTask(PointNavRandomTask):
         self.time_horizon = self.config.get('orca_time_horizon', 2.0)
         self.time_horizon_obst = self.config.get('orca_time_horizon_obst', 2.0)
         self.orca_radius = self.config.get('orca_radius', 0.5)
-        self.orca_max_speed = self.config.get('orca_max_speed', 0.5)
+        self.orca_max_speed = self.config.get('orca_max_speed', 2.5)
 
         self.orca_sim = rvo2.PyRVOSimulator(
             env.action_timestep,
@@ -264,6 +270,21 @@ class SocialNavRandomTask(PointNavRandomTask):
                     self.episode_config.episodes[episode_index]['pedestrians'][ped_id]['initial_orn'])
                 waypoints = self.sample_new_target_pos(
                     env, initial_pos, ped_id)
+            if self.own_motion_data:
+                print("what is ped_id", ped_id)
+
+                if(ped_id == 0):
+                    initial_pos = np.array([-1.78, 2.88, 0.00247])  #[0.495, 2.15, -0.00143] )
+                    initial_orn = np.array([-0.5,-0.5,-0.5,0.5] )
+                if(ped_id == 1):
+                    initial_pos = np.array([2.14, 1.45, -0.00137]) #[-1.23, 3.99, 0.00247] )
+                    initial_orn = np.array([-0.5,-0.5,-0.5,0.5] )
+                if(ped_id == 2):
+                    initial_pos = np.array([0.16, 0.169, -0.00534]) #[1.36, 4.43, 0.00247] )
+                    initial_orn = np.array([-0.5,-0.5,-0.5,0.5] )
+
+                waypoints = self.sample_new_target_pos(env, initial_pos, ped_id)
+
             else:
                 initial_pos = self.sample_initial_pos(env, ped_id)
                 initial_orn = p.getQuaternionFromEuler(ped.default_orn_euler)
@@ -311,6 +332,13 @@ class SocialNavRandomTask(PointNavRandomTask):
         :param ped_id: the pedestrian id to sample goal
         :return waypoints: the path to the goal position
         """
+        global iteration_no
+        global call_no
+
+        call_no = call_no + 1
+
+        #print("call_no", call_no)
+        #traceback.print_stack()
 
         while True:
             if self.offline_eval:
@@ -328,6 +356,19 @@ class SocialNavRandomTask(PointNavRandomTask):
 
                 target_pos = np.array(sampled_goals[pos_index])
                 self.episode_config.goal_index[ped_id] += 1
+
+            if self.own_motion_data:
+                iteration_no = iteration_no + 1
+                epoch = iteration_no % 6     
+
+                if(ped_id == 0):
+                    target_pos = np.array(person_1_goal[epoch])
+                if(ped_id == 1):
+                    target_pos = np.array(person_2_goal[epoch])
+                if(ped_id == 2):
+                    target_pos = np.array(person_3_goal[epoch])
+
+
             else:
                 _, target_pos = env.scene.get_random_point(
                     floor=self.floor_num)
@@ -400,7 +441,8 @@ class SocialNavRandomTask(PointNavRandomTask):
                 if self.offline_eval:
                     waypoints = self.sample_new_target_pos(env, current_pos, i)
                 else:
-                    waypoints = self.sample_new_target_pos(env, current_pos)
+                    print("Is i == ped_id",i)
+                    waypoints = self.sample_new_target_pos(env, current_pos, i)
                 self.pedestrian_waypoints[i] = waypoints
                 self.num_steps_stop[i] = 0
 

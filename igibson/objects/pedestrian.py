@@ -12,7 +12,7 @@ class Pedestrian(StatefulObject):
     Pedestiran object
     """
 
-    def __init__(self, style="standing", pos=[0, 0, 0], scale=1.0, visual_only=True, **kwargs):
+    def __init__(self, style="standing", pos=[0, 0, 0], scale=1.0, visual_only=False, **kwargs):
         super(Pedestrian, self).__init__(**kwargs)
         self.collision_filename = os.path.join(
             igibson.assets_path, "models", "person_meshes", "person_{}".format(style), "meshes", "person_vhacd.obj"
