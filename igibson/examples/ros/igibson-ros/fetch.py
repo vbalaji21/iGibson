@@ -20,12 +20,13 @@ from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Image as ImageMsg
 from sensor_msgs.msg import Joy, PointCloud, PointCloud2
 from std_msgs.msg import Header
-from tf.transformations import quaternion_from_euler
+from tf.transformations import quaternion_from_euler, euler_from_quaternion
 
 from igibson.envs.igibson_env import iGibsonEnv
 from cohan_msgs.msg import TrackedAgents, TrackedAgent, TrackedSegment, TrackedSegmentType, AgentType
 from igibson.tasks.social_nav_random_task import SocialNavRandomTask
 import math
+import pybullet as p
 
 def point_cloud(points, parent_frame):
     """ Creates a point cloud message.
@@ -226,6 +227,8 @@ class SimNode(object):
                 self.p.z    = 0 # self.env.task.current_pos[2]
 
                 pos,orn =  self.env.task.pedestrians[-1].get_base_pos_and_orientation(agent_id-1)
+                euler_orientation = p.getEulerFromQuaternion(orn)
+
 
 
                 agent_segment = TrackedSegment()
@@ -233,11 +236,18 @@ class SimNode(object):
                 agent_segment.pose.pose.position.x = pos[0]  # self.env.task.current_pos[0]
                 agent_segment.pose.pose.position.y = pos[1]  # self.env.task.current_pos[1]
                 agent_segment.pose.pose.position.z = pos[2]  # self.env.task.current_pos[2]
-                quat = quaternion_from_euler(0,0,self.env.task.orientation)
-                agent_segment.pose.pose.orientation.x = orn[0] # quat[0]
-                agent_segment.pose.pose.orientation.y = orn[1] # quat[1]
-                agent_segment.pose.pose.orientation.z = orn[2] # quat[2]
-                agent_segment.pose.pose.orientation.w = orn[3] # quat[3]
+                quat = quaternion_from_euler(0,0,euler_orientation[2]-1.57)
+
+                print("old angles", self.env.task.orientation)
+                angles = euler_from_quaternion(orn)
+                print("new angles", angles)    
+                print(" old orientation", quat)            
+                print("orientation", orn)
+
+                agent_segment.pose.pose.orientation.x = quat[0]
+                agent_segment.pose.pose.orientation.y = quat[1]
+                agent_segment.pose.pose.orientation.z = quat[2]
+                agent_segment.pose.pose.orientation.w = quat[3]
                 agent_segment.twist.twist.linear.x = linear[0] # self.env.task.desired_vel[0]
                 agent_segment.twist.twist.linear.y = linear[1] #self.env.task.desired_vel[1]
                 agent_segment.twist.twist.angular.z = angular[2] #self.env.task.desired_vel[2]

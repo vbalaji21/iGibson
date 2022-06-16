@@ -456,6 +456,7 @@ class SocialNavRandomTask(PointNavRandomTask):
                               self.pedestrian_waypoints)):
             current_pos = np.array(ped.get_position())
             self.current_pos = current_pos
+
             current_yaw = ped.get_yaw()
             orinetation = current_yaw
             self.orientation = orinetation
@@ -468,7 +469,6 @@ class SocialNavRandomTask(PointNavRandomTask):
                 if self.offline_eval:
                     waypoints = self.sample_new_target_pos(env, current_pos, i)
                 else:
-                    print("Is i == ped_id",i)
                     waypoints = self.sample_new_target_pos(env, current_pos, i)
                 self.pedestrian_waypoints[i] = waypoints
                 self.num_steps_stop[i] = 0

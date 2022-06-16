@@ -27,7 +27,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: Image
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -636,6 +636,22 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /move_base/HATebLocalPlannerROS/agent_marker
+      Name: MarkerArray
+      Namespaces:
+        body: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /move_base/HATebLocalPlannerROS/agent_arrow
+      Name: MarkerArray
+      Namespaces:
+        direction: true
+      Queue Size: 100
       Value: true
   Enabled: true
   Global Options:
