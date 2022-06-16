@@ -16,6 +16,8 @@
 
   <node name="stage_joints" pkg="igibson-ros" type="stage_joints.py"/>
 
+  <!-- <node name="publish_traj_points" pkg="igibson-ros" type="publish_traj_points.py"/> -->
+
   <node name="fetch_gibson_sim" pkg="igibson-ros" type="fetch.py" output="screen">
   </node>
   
@@ -48,7 +50,7 @@
  <include file="$(find turtlebot_teleop)/launch/ps3_teleop.launch">
  </include>
 
-  <arg name="map_file" default="$(find igibson-ros)/map/graphnav/floor_0.yaml"/>
+  <arg name="map_file" default="/local/users/vvigneshba/iGibson_assets_datasets/data/gibson_v2_all_full_572_scenes/gibson_v2/Kingfisher/ros/floor_0.yaml"/>
   <rosparam param="map_file" subst_value="True">$(arg map_file)</rosparam>
   <node pkg="map_server" type="map_server"  name="map_server" args="$(arg map_file)" />
 
@@ -59,16 +61,16 @@
   <arg name="laser_topic" default="gibson_ros/laserscan" />
   <arg name="custom_param_file" default="$(find igibson-ros)/param/dummy.yaml"/>
 
-  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+  <!-- <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
     <rosparam file="$(find igibson-ros)/param/costmap_common_params.yaml" command="load" ns="global_costmap" />
     <rosparam file="$(find igibson-ros)/param/costmap_common_params.yaml" command="load" ns="local_costmap" />
     <rosparam file="$(find igibson-ros)/param/local_costmap_params.yaml" command="load" />
     <rosparam file="$(find igibson-ros)/param/global_costmap_params.yaml" command="load" />
-    <rosparam file="$(find igibson-ros)/param/gt_navigation/dwa_local_planner_params.yaml" command="load" />
+    <rosparam file="$(find igibson-ros)/param/gt_navigation/dwa_local_planner_params.yaml" command="load" /> -->
     <!-- <rosparam file="$(find igibson-ros)/param/base_local_planner_params.yaml" command="load" /> -->
-    <rosparam file="$(find igibson-ros)/param/move_base_params.yaml" command="load" />
+    <!-- <rosparam file="$(find igibson-ros)/param/move_base_params.yaml" command="load" />
     <rosparam file="$(find igibson-ros)/param/global_planner_params.yaml" command="load" />
-    <rosparam file="$(find igibson-ros)/param/navfn_global_planner_params.yaml" command="load" />
+    <rosparam file="$(find igibson-ros)/param/navfn_global_planner_params.yaml" command="load" /> -->
     <!-- external params file that could be loaded into the move_base namespace -->
     <!-- <rosparam file="$(arg custom_param_file)" command="load" /> -->
 
@@ -79,10 +81,10 @@
     <param name="local_costmap/robot_base_frame" value="$(arg base_frame_id)"/>
     <param name="DWAPlannerROS/global_frame_id" value="$(arg odom_frame_id)"/> -->
 
-    <remap from="cmd_vel" to="navigation_velocity_smoother/raw_cmd_vel"/>
+    <!-- <remap from="cmd_vel" to="navigation_velocity_smoother/raw_cmd_vel"/>
     <remap from="odom" to="$(arg odom_topic)"/>
-    <remap from="scan" to="$(arg laser_topic)"/>
-  </node>
+    <remap from="scan" to="$(arg laser_topic)"/> -->
+  <!-- </node> -->
 
   <node pkg="nodelet" type="nodelet" args="manager"
         name="record_player_manager" output="screen"/>
