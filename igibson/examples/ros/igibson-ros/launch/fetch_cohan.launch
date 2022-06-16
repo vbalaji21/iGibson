@@ -1,0 +1,104 @@
+<launch>
+
+  <!-- important generally, but specifically utilised by the current app manager -->
+  <param name="robot/name" value="$(optenv ROBOT fetch)"/>
+  <param name="robot/type" value="FetchBase"/>
+
+  <param name="/use_sim_time" value="false" />
+
+
+  <param name="robot_description" command="cat $(find fetch_description)/robots/fetch.urdf"/>
+
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+    <rosparam param="source_list">["/stage_joint_states"]</rosparam>
+    <!-- <param name="rate" value="50"/> -->
+  </node>
+
+  <node name="stage_joints" pkg="igibson-ros" type="stage_joints.py"/>
+
+  <!-- <node name="human_teleop" pkg="igibson-ros" type="human_teleop_subscriber.py" output="screen"/> -->
+
+  <node name="fetch_gibson_sim" pkg="igibson-ros" type="fetch.py" output="screen">
+  </node>
+  
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
+    <param name="publish_frequency" type="double" value="50.0" />
+  </node>
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find igibson-ros)/rviz/navigation.rviz" />
+
+  <node pkg="tf" type="static_transform_publisher" name="gibson_world_transform" args="0 0 0 0 0 0 /world /map 100"/>
+  <node pkg="igibson-ros" type="publish_true_map_to_odom_tf.py" name="map_odom_tf"/>
+  <!--node pkg="fake_localization" type="fake_localization" name="fake_localize" >
+	<remap from="/base_pose_ground_truth" to="/ground_truth_odom"/>
+  </node-->
+
+  <!--
+  <node name="gibson_sim_noise" pkg="igibson-ros" type="noise_injection.py">
+  </node>
+  -->
+
+  <!-- Velocity muxer -->
+  <node pkg="nodelet" type="nodelet" name="mobile_base_nodelet_manager" args="manager"/>
+  <node pkg="nodelet" type="nodelet" name="cmd_vel_mux"
+        args="load yocs_cmd_vel_mux/CmdVelMuxNodelet mobile_base_nodelet_manager">
+    <param name="yaml_cfg_file" value="$(find turtlebot_bringup)/param/mux.yaml" />
+    <remap from="cmd_vel_mux/output" to="mobile_base/commands/velocity"/>
+    <remap from="cmd_vel_mux/input/navi" to="/navigation_velocity_smoother/raw_cmd_vel" />
+  </node>
+
+ <include file="$(find turtlebot_teleop)/launch/ps3_teleop.launch">
+ </include>
+
+  <arg name="map_file" default="/local/users/vvigneshba/iGibson_assets_datasets/data/gibson_v2_all_full_572_scenes/gibson_v2/Kingfisher/ros/floor_0.yaml"/>
+  <rosparam param="map_file" subst_value="True">$(arg map_file)</rosparam>
+  <node pkg="map_server" type="map_server"  name="map_server" args="$(arg map_file)" />
+
+  <arg name="odom_frame_id"   default="odom"/>
+  <arg name="base_frame_id"   default="base_link"/>
+  <arg name="global_frame_id" default="map"/>
+  <arg name="odom_topic" default="odom" />
+  <arg name="laser_topic" default="gibson_ros/laserscan" />
+  <arg name="custom_param_file" default="$(find igibson-ros)/param/dummy.yaml"/>
+
+    <node name="pointcloud_to_laserscan_node" type="pointcloud_to_laserscan_node" pkg="pointcloud_to_laserscan">
+    
+    <remap from="cloud_in" to="gibson_ros/lidar/points"/>
+    <remap from="scan" to="gibson_ros/laserscan" />
+      <rosparam>
+      target_frame: laser_link
+      transform_tolerance: 0.01
+      min_height: 0.0
+      max_height: 1.0
+      
+      angle_min: -1.91986
+      angle_max: 1.91986
+      angle_increment: 0.0087
+      scan_time: 0.3333
+      range_min: 0.25  <!-- 0.45 -->
+      range_max: 5.0   <!-- 10.0 -->
+      use_inf: true
+      
+      #concurrency_level affects number of pc queued for processing and the number of threadsused
+      # 0: Detect number of cores
+      # 1: Single threaded
+      # 2: inf : Parallelism level
+      concurrency_level: 1
+    </rosparam>
+  </node>
+
+<!-- Joy Teleop node -->
+  <rosparam file="$(find igibson-ros)/param/joystick_param.yaml" command="load" /> 
+  <node name="joy_teleop_node" pkg="joy_teleop" type="joy_teleop.py" />
+
+<!-- clearing costmap -->
+  <node pkg="igibson-ros" type="clear_costmap.py" name="clear_costmap"/>
+
+<!-- Goal data, time taken and human robot distance -->
+  <!-- <node pkg="igibson-ros" type="goal_data_script.py" name="goal_data_publisher"/> -->
+
+  <node pkg="nodelet" type="nodelet" args="manager"
+        name="record_player_manager" output="screen"/>
+
+</launch>
+

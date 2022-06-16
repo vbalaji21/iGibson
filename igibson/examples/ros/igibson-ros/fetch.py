@@ -293,7 +293,7 @@ class SimNode(object):
                 scan = obs["scan"]
                 lidar_header = Header()
                 lidar_header.stamp = now
-                lidar_header.frame_id = "scan_link"
+                lidar_header.frame_id = "laser_link"
 
                 laser_linear_range = self.env.sensors["scan_occ"].laser_linear_range
                 laser_angular_range = self.env.sensors["scan_occ"].laser_angular_range
