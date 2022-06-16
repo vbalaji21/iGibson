@@ -1,23 +1,64 @@
 #!/usr/bin/env python3
 import logging
 import os
+from pickletools import uint8
 
 import numpy as np
 import rospkg
 import rospy
+import sensor_msgs.msg as sensor_msgs
 import tf
 from cv_bridge import CvBridge
-from geometry_msgs.msg import PoseStamped, Twist
+from geometry_msgs.msg import Point32, PoseStamped, Twist
 from nav_msgs.msg import Odometry
+from rospy.impl.registration import Registration, get_registration_listeners, get_topic_manager, set_topic_manager
+from rospy.impl.statistics import SubscriberStatisticsLogger
+from rospy.impl.tcpros import DEFAULT_BUFF_SIZE, get_tcpros_handler
+from rospy.impl.tcpros_pubsub import QueuedConnection
 from sensor_msgs import point_cloud2 as pc2
 from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Image as ImageMsg
-from sensor_msgs.msg import PointCloud2
+from sensor_msgs.msg import Joy, PointCloud, PointCloud2
 from std_msgs.msg import Header
+from tf.transformations import quaternion_from_euler
 
 from igibson.envs.igibson_env import iGibsonEnv
 from cohan_msgs.msg import TrackedAgents, TrackedAgent, TrackedSegment, TrackedSegmentType, AgentType
 from igibson.tasks.social_nav_random_task import SocialNavRandomTask
+import math
+
+def point_cloud(points, parent_frame):
+    """ Creates a point cloud message.
+    Args:
+        points: Nx7 array of xyz positions (m) and rgba colors (0..1)
+        parent_frame: frame in which the point cloud is defined
+    Returns:
+        sensor_msgs/PointCloud2 message
+    """
+    ros_dtype = sensor_msgs.PointField.FLOAT32
+    dtype = np.float32
+    itemsize = np.dtype(dtype).itemsize
+
+    data = points.astype(dtype).tobytes()
+
+    fields = [sensor_msgs.PointField(
+        name=n, offset=i*itemsize, datatype=ros_dtype, count=1)
+        for i, n in enumerate('xyzrgba')]
+
+    header = Header(frame_id=parent_frame, stamp=rospy.Time.now())
+
+    return sensor_msgs.PointCloud2(
+        header=header,
+        height=1,
+        width=points.shape[0],
+        is_dense=False,
+        is_bigendian=False,
+        fields=fields,
+        point_step=(itemsize * 3), #7
+        row_step=(itemsize * 3 * points.shape[0]), #7
+        data=data
+    )
+
 
 
 class SimNode(object):
@@ -31,6 +72,13 @@ class SimNode(object):
         self.cmdx = 0.0
         self.cmdy = 0.0
 
+        self.human_vel = {
+            "lin_vel": 0.0,
+            "ang_vel": 0.0,
+        }
+
+        self.yaw = 0.0
+
         self.image_pub = rospy.Publisher("/gibson_ros/camera/rgb/image", ImageMsg, queue_size=10)
         self.depth_pub = rospy.Publisher("/gibson_ros/camera/depth/image", ImageMsg, queue_size=10)
         self.lidar_pub = rospy.Publisher("/gibson_ros/lidar/points", PointCloud2, queue_size=10)
@@ -38,6 +86,17 @@ class SimNode(object):
         self.odom_pub = rospy.Publisher("/odom", Odometry, queue_size=10)
         self.gt_pose_pub = rospy.Publisher("/ground_truth_odom", Odometry, queue_size=10)
         self.camera_info_pub = rospy.Publisher("/gibson_ros/camera/depth/camera_info", CameraInfo, queue_size=10)
+
+        #TODO: Add CoHAN ROS bridge to send pedestrian position and twists  
+        rospy.Subscriber("/cmd_vel", Twist, self.human_vel_callback) 
+
+
+        #Add a publisher to publish the human torso pose and twist to ROS
+        self.tracked_agents_pub = rospy.Publisher("/tracked_agents", TrackedAgents, queue_size=10) 
+ 
+        # Add humans for other planners
+        self.identify_humans_pub = rospy.Publisher("/gibson_ros/lidar/points_test", PointCloud2, queue_size=1)
+        self.p  = Point32()
 
  
  
@@ -78,9 +137,30 @@ class SimNode(object):
         self.env = iGibsonEnv(
             config_file=config_filename,mode="gui_non_interactive", use_pb_gui=True, action_timestep=1 / 30.0
         )  # assume a 30Hz simulation
+
+        self.num_hum = self.env.task.num_pedestrians
+        self.ns = None
+    #    self.tracked_agents_pub = [].pose.pose.position.
+        self.Segment_Type = TrackedSegmentType.TORSO
+        self.agents = TrackedAgents()
+        self.robot = TrackedAgent()
+        self.sig_1 = False
+        self.sig_2 = False
+
         self.env.reset()
 
         self.tp_time = None
+
+    def human_vel_callback(self, msg):
+        """Get the velocity from joystick"""
+        # Person meshes are offset by 90 by default
+
+        self.yaw = self.env.task.pedestrians[-1].get_yaw()
+
+
+        #msg.linear.y * math.cos(self.yaw), -msg.linear.x * math.sin(self.yaw)
+        self.human_vel["lin_vel"] = [msg.linear.x * math.cos(self.yaw), msg.linear.x * math.sin(self.yaw), 0]     # linear velocity along X and Y # msg.linear.y , -msg.linear.x 
+        self.human_vel["ang_vel"] = [msg.angular.x, msg.angular.y , msg.angular.z]    # angular velocity along Y
 
     def run(self):
         while not rospy.is_shutdown():
@@ -124,6 +204,78 @@ class SimNode(object):
             msg.header.stamp = now
             msg.header.frame_id = "camera_depth_optical_frame"
             self.camera_info_pub.publish(msg)
+
+            # tracked_agents = TrackedAgents()
+            self.num_hum = self.env.task.num_pedestrians
+            tracked_agents = TrackedAgents()
+            self.Segment_Type = TrackedSegmentType.TORSO
+            #self.env.task.pedestrians[-1].set_velocity(self.human_vel["lin_vel"], self.human_vel["ang_vel"]) # Only one human
+
+#            for i in range(3):
+
+                # print("position out", pos)
+                # print("orientation out", orn)
+            for agent_id in range(1,self.num_hum+1):
+                # print("agent_id", agent_id)
+                # print("num hum", self.num_hum)
+
+                linear, angular = self.env.task.pedestrians[-1].get_velocity(agent_id-1)
+
+                self.p.x    = self.env.task.current_pos[0]
+                self.p.y    = self.env.task.current_pos[1]
+                self.p.z    = 0 # self.env.task.current_pos[2]
+
+                pos,orn =  self.env.task.pedestrians[-1].get_base_pos_and_orientation(agent_id-1)
+
+
+                agent_segment = TrackedSegment()
+                agent_segment.type = self.Segment_Type
+                agent_segment.pose.pose.position.x = pos[0]  # self.env.task.current_pos[0]
+                agent_segment.pose.pose.position.y = pos[1]  # self.env.task.current_pos[1]
+                agent_segment.pose.pose.position.z = pos[2]  # self.env.task.current_pos[2]
+                quat = quaternion_from_euler(0,0,self.env.task.orientation)
+                agent_segment.pose.pose.orientation.x = orn[0] # quat[0]
+                agent_segment.pose.pose.orientation.y = orn[1] # quat[1]
+                agent_segment.pose.pose.orientation.z = orn[2] # quat[2]
+                agent_segment.pose.pose.orientation.w = orn[3] # quat[3]
+                agent_segment.twist.twist.linear.x = linear[0] # self.env.task.desired_vel[0]
+                agent_segment.twist.twist.linear.y = linear[1] #self.env.task.desired_vel[1]
+                agent_segment.twist.twist.angular.z = angular[2] #self.env.task.desired_vel[2]
+
+                tracked_agent = TrackedAgent()
+                tracked_agent.type = AgentType.HUMAN
+                tracked_agent.name = "human"+str(agent_id)
+                tracked_agent.track_id = agent_id
+                tracked_agent.segments.append(agent_segment)
+                tracked_agents.agents.append(tracked_agent)
+            if(tracked_agents.agents):
+                self.agents = tracked_agents
+                self.agents.header.stamp = rospy.Time.now()
+                self.agents.header.frame_id = "map"
+                # print("\033[2;31;43m message type of orient \n", type(agent_segment.pose.pose.orientation))
+                # print("\033[2;31;43m message data of orient \n", agent_segment.pose.pose.orientation)
+                self.tracked_agents_pub.publish(tracked_agents)
+
+
+
+
+
+# Adding human to lidar for normal planners
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             if (self.tp_time is None) or (
                 (self.tp_time is not None) and ((rospy.Time.now() - self.tp_time).to_sec() > 1.0)

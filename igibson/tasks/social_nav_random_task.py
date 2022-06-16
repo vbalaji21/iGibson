@@ -44,6 +44,9 @@ class SocialNavRandomTask(PointNavRandomTask):
             'num_sqrt_meter_per_ped', 8)
         self.num_pedestrians = 3 # max(1, int(num_sqrt_meter / self.num_sqrt_meter_per_ped))
         self.own_motion_data = True
+        self.current_pos = None
+        self.orientation = None
+        self.desired_vel = None
 
         """
         Parameters for our mechanism of preventing pedestrians to back up.
@@ -452,6 +455,11 @@ class SocialNavRandomTask(PointNavRandomTask):
                               self.orca_pedestrians,
                               self.pedestrian_waypoints)):
             current_pos = np.array(ped.get_position())
+            self.current_pos = current_pos
+            current_yaw = ped.get_yaw()
+            orinetation = current_yaw
+            self.orientation = orinetation
+
 
             # Sample new waypoints if empty OR
             # if the pedestrian has stopped for self.num_steps_stop_thresh steps

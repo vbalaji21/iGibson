@@ -44,7 +44,7 @@ class Pedestrian(StatefulObject):
             self.body_id = p.createMultiBody(baseMass=60,
                                         baseCollisionShapeIndex=collision_id,
                                         baseVisualShapeIndex=visual_id)
-
+        print("body ids", self.body_id)
         p.resetBasePositionAndOrientation(self.body_id, self.pos, p.getQuaternionFromEuler(self.default_orn_euler))  #[-0.5, -0.5, -0.5, 0.5])
 #        self.cid = p.createConstraint(
 #            body_id,
@@ -85,3 +85,29 @@ class Pedestrian(StatefulObject):
         Reset pedestrian position and orientation by changing constraint
         """
         p.changeConstraint(self.cid, pos, orn)
+
+    # def set_velocity(self, linear_velocity, angular_velocity):
+        #global human_body_id 
+        #p.resetBaseVelocity(human_body_id , linear_velocity, angular_velocity)
+
+    def get_base_pos_and_orientation(self, ped_id):
+        id = 3+ped_id
+        pos, orn = p.getBasePositionAndOrientation(id)
+        
+        # print("id", id)
+        # print("pos", pos)
+        # print("orn", orn)
+        return pos, orn
+
+    def get_velocity(self, ped_id):
+        """Get object bodies' velocity in the format of List[Tuple[Array[vx, vy, vz], Array[wx, wy, wz]]]"""
+        #velocities = []
+        #global human_body_id 
+
+        #print("print human_body_id", human_body_id)
+        id = 3 + ped_id
+        #for body_id in self.get_body_ids():
+        lin, ang = p.getBaseVelocity(id) #(body_id)
+        #velocities.append((np.array(lin), np.array(ang)))
+
+        return lin, ang
