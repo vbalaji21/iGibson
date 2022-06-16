@@ -1,6 +1,6 @@
 # scene
 scene: gibson
-scene_id: Espanola # Barboursville # Pocopson # Hercules # Allensville # Darnestown # Frankton # Kingfisher  # Avonia # Kingfisher # Beach # Biltmore # Darnestown # Kingfisher     #Webster   #Kingfisher
+scene_id: Kerrtown # Espanola # Barboursville # Pocopson # Hercules # Allensville # Darnestown # Frankton # Kingfisher  # Avonia # Kingfisher # Beach # Biltmore # Darnestown # Kingfisher     #Webster   #Kingfisher
 build_graph: true
 load_texture: true
 pybullet_load_texture: true
@@ -42,7 +42,7 @@ robot:
 
 # task
 task: social_nav_random   #point_nav_random                                                                                  
-initial_pos:  [-13.881997108459473, 6.0127272605896, -0.005340576171875]                                              
+initial_pos: [1.36, 3.84,0] # [-13.881997108459473, 6.0127272605896, -0.005340576171875]                                              
 initial_orn: [0.0, 1.571, 0.0] 
 #task: point_nav_random
 #target_dist_min: 1.0

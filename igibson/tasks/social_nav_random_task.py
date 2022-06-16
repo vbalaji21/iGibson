@@ -278,7 +278,7 @@ class SocialNavRandomTask(PointNavRandomTask):
                 waypoints = self.sample_new_target_pos(
                     env, initial_pos, ped_id)
             else:
-                initial_pos = [-13.847393035888672, 14.284258842468262, -0.001434326171875]# self.sample_initial_pos(env, ped_id)
+                initial_pos = [1.36, 3.84, 0]# [-13.847393035888672, 14.284258842468262, -0.001434326171875]# self.sample_initial_pos(env, ped_id)
                 #initial_orn =  (0, 0, 0.707, 0.707) #p.getQuaternionFromEuler(ped.default_orn_euler)
                 waypoints = self.sample_new_target_pos(env, initial_pos)
 
@@ -299,7 +299,7 @@ class SocialNavRandomTask(PointNavRandomTask):
         if self.offline_eval:
             self.episode_config.reset_episode()
             episode_index = self.episode_config.episode_index
-            initial_pos =   [ -16.23610496520996, 12.187033653259277, -0.001434326171875]   #np.array(
+            initial_pos =   [1.36, 3.84, 0 ] #  -16.23610496520996, 12.187033653259277, -0.001434326171875]   #np.array(
                 # self.episode_config.episodes[episode_index]['initial_pos'])
             initial_orn = (0, 0, 0, 1) # np.array(
             #    self.episode_config.episodes[episode_index]['initial_orn'])

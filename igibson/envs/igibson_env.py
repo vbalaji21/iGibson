@@ -479,7 +479,7 @@ class iGibsonEnv(BaseEnv):
         """
         self.randomize_domain()
         # Move robot away from the scene.                 # setting initial position of the robot
-        self.robots[0].set_position([-0.663719892501831 , -1.626983404159546, 0.002532958984375]) # [-3.8169119358062744, -6.734062194824219, 0.002471923828125]    # kingfisher [-19.0,14.0,0]      #[-13.881997108459473, 6.0127272605896, -0.005340576171875])     #([100.0, 100.0, 100.0]) #TODO: robot_init_position
+        self.robots[0].set_position([1.36 , 3.84, 0]) # [-3.8169119358062744, -6.734062194824219, 0.002471923828125]    # kingfisher [-19.0,14.0,0]      #[-13.881997108459473, 6.0127272605896, -0.005340576171875])     #([100.0, 100.0, 100.0]) #TODO: robot_init_position
         self.task.reset(self)
         self.simulator.sync(force_sync=True)
         state = self.get_state()
