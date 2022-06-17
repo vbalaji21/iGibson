@@ -16,6 +16,7 @@
 
   <node name="stage_joints" pkg="igibson-ros" type="stage_joints.py"/>
 
+  <!-- <node name="human_teleop" pkg="igibson-ros" type="human_teleop_subscriber.py" output="screen"/> -->
   <!-- <node name="publish_traj_points" pkg="igibson-ros" type="publish_traj_points.py"/> -->
 
   <node name="fetch_gibson_sim" pkg="igibson-ros" type="fetch.py" output="screen">
@@ -61,7 +62,44 @@
   <arg name="laser_topic" default="gibson_ros/laserscan" />
   <arg name="custom_param_file" default="$(find igibson-ros)/param/dummy.yaml"/>
 
-  <!-- <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    <node name="pointcloud_to_laserscan_node" type="pointcloud_to_laserscan_node" pkg="pointcloud_to_laserscan">
+    
+    <remap from="cloud_in" to="gibson_ros/lidar/points"/>
+    <remap from="scan" to="gibson_ros/laserscan" />
+      <rosparam>
+      target_frame: laser_link
+      transform_tolerance: 0.01
+      min_height: 0.0
+      max_height: 1.0
+      
+      angle_min: -1.91986
+      angle_max: 1.91986
+      angle_increment: 0.0087
+      scan_time: 0.3333
+      range_min: 0.25  <!-- 0.45 -->
+      range_max: 5.0   <!-- 10.0 -->
+      use_inf: true
+      
+      #concurrency_level affects number of pc queued for processing and the number of threadsused
+      # 0: Detect number of cores
+      # 1: Single threaded
+      # 2: inf : Parallelism level
+      concurrency_level: 1
+    </rosparam>
+  </node>
+
+<!-- Joy Teleop node -->
+  <rosparam file="$(find igibson-ros)/param/joystick_param.yaml" command="load" /> 
+  <node name="joy_teleop_node" pkg="joy_teleop" type="joy_teleop.py" />
+
+<!-- clearing costmap -->
+  <node pkg="igibson-ros" type="clear_costmap.py" name="clear_costmap"/>
+
+<!-- Goal data, time taken and human robot distance -->
+  <!-- <node pkg="igibson-ros" type="goal_data_script.py" name="goal_data_publisher"/> -->
+
+<!-- comment for using cohan -->
+<!-- <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
     <rosparam file="$(find igibson-ros)/param/costmap_common_params.yaml" command="load" ns="global_costmap" />
     <rosparam file="$(find igibson-ros)/param/costmap_common_params.yaml" command="load" ns="local_costmap" />
     <rosparam file="$(find igibson-ros)/param/local_costmap_params.yaml" command="load" />

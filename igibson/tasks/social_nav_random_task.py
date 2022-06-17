@@ -9,6 +9,7 @@ import pybullet as p
 import numpy as np
 import rvo2
 import traceback # debug
+import math
 
 iteration_no = 0
 call_no = 0
@@ -23,6 +24,12 @@ person_1_goal_kerrtown =  [[-2.72, 6.42, -0.00143], [-2.55, 5.78, -0.00925], [-2
 person_2_goal_kerrtown =  [[2.62, -0.281, -0.00143],[2.44, 0.58, -0.00143 ], [2.55, 2.26, -0.00143], [2.02, 3.19, -0.00143], [0.649, 2.95, -0.00143], [0.405, 2.21, -0.00143], [0.254, 1.06, -0.00143], [-0.0893, 0.254, -0.00143], [-0.421, -0.484, -0.00143],        [-0.0893, 0.254, -0.00143], [0.254, 1.06, -0.00143], [0.405, 2.21, -0.00143], [0.649, 2.95, -0.00143], [2.02, 3.19, -0.00143], [2.55, 2.26, -0.00143], [2.44, 0.58, -0.00143 ]     ]
 person_3_goal_kerrtown =  [[-1.09, 7.4, -0.00143], [-0.118, 6.24, -0.00143], [0.451, 5.58, -0.00143],[0.934, 4.85, -0.00143], [1.52, 4.47, 0.00247], [2.09, 4.62, -0.00143], [3.26, 4.69, -0.00143], [4.85, 4.73, -0.00143], [7.26, 4.74, -0.00143],            [4.85, 4.73, -0.00143], [3.26, 4.69, -0.00143], [2.09, 4.62, -0.00143], [1.52, 4.47, 0.00247], [0.934, 4.85, -0.00143], [0.451, 5.58, -0.00143], [-0.118, 6.24, -0.00143]  ]
 
+def normalize_theta(theta):
+  PI = math.pi
+  result = math.fmod(theta + PI, 2.0 * PI)
+  if result <= 0:
+    return result + PI
+  return result - PI
 
 class SocialNavRandomTask(PointNavRandomTask):
     """
@@ -45,9 +52,11 @@ class SocialNavRandomTask(PointNavRandomTask):
         self.num_pedestrians = 3 # max(1, int(num_sqrt_meter / self.num_sqrt_meter_per_ped))
         self.own_motion_data = True
         self.current_pos = None
-        self.orientation = None
         self.desired_vel = None
-
+        self.orientation = None
+        self.max_omega_speed = None
+        self.vels = None
+        
         """
         Parameters for our mechanism of preventing pedestrians to back up.
         Instead, stop them and then re-sample their goals.
@@ -118,7 +127,8 @@ class SocialNavRandomTask(PointNavRandomTask):
         self.time_horizon = self.config.get('orca_time_horizon', 2.0)
         self.time_horizon_obst = self.config.get('orca_time_horizon_obst', 2.0)
         self.orca_radius = self.config.get('orca_radius', 0.5)
-        self.orca_max_speed = self.config.get('orca_max_speed', 1.2) # normal human speed 1.2 meters per second
+        self.orca_max_speed = self.config.get('orca_max_speed', 1.2)  #given value 0.5 changin it to same speed as robot # normal human speed 1.2 meters per second
+        self.max_omega_speed = 0
 
         self.orca_sim = rvo2.PyRVOSimulator(
             env.action_timestep,
@@ -174,6 +184,7 @@ class SocialNavRandomTask(PointNavRandomTask):
         self.robot_orca_ped = self.orca_sim.addAgent((0, 0))
         pedestrians = []
         orca_pedestrians = []
+        self.vels = [[]]*3
         for i in range(self.num_pedestrians):
             ped = Pedestrian(style=(i % 3))
             env.simulator.import_object(ped)
@@ -483,6 +494,8 @@ class SocialNavRandomTask(PointNavRandomTask):
             desired_vel = desired_vel / \
                 np.linalg.norm(desired_vel) * self.orca_max_speed
             self.orca_sim.setAgentPrefVelocity(orca_ped, tuple(desired_vel))
+            print(i)
+            self.vels[i] = list(desired_vel)
 
         self.orca_sim.doStep()
 
@@ -497,6 +510,7 @@ class SocialNavRandomTask(PointNavRandomTask):
                               self.pedestrian_waypoints)):
             pos_xyz = next_peds_pos_xyz[i]
             if next_peds_stop_flag[i] is True:
+                self.vels[i] = [0,0,0]
                 # revert back ORCA sim pedestrian to the previous time step
                 self.num_steps_stop[i] += 1
                 print("\033[2;37;40m nd array \033[0;37;40m \n", pos_xyz[:2])

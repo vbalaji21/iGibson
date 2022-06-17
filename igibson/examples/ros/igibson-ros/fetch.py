@@ -60,8 +60,6 @@ def point_cloud(points, parent_frame):
         data=data
     )
 
-
-
 class SimNode(object):
     def __init__(self):
         rospy.init_node("igibson_sim")
@@ -72,7 +70,6 @@ class SimNode(object):
 
         self.cmdx = 0.0
         self.cmdy = 0.0
-
         self.human_vel = {
             "lin_vel": 0.0,
             "ang_vel": 0.0,
@@ -98,36 +95,6 @@ class SimNode(object):
         # Add humans for other planners
         self.identify_humans_pub = rospy.Publisher("/gibson_ros/lidar/points_test", PointCloud2, queue_size=1)
         self.p  = Point32()
-
- 
- 
-#TODO: Add CoHAN ROS bridge to send pedestrian position and twists  
- 
-#         tracked_agents = TrackedAgents()
-#         self.num_ped = 4 #SocialNavRandomTask(self).read_num_pedestrians(self)
-#         for agent_id in range(1,self.num_ped+1):  #TODO:fins number of humans 
-# #            if self.ns == "human"+str(agent_id):
-# #                continue
-#             agent_segment = TrackedSegment()
-#             self.Segment_Type = TrackedSegmentType.TORSO
-#             agent_segment.type = self.Segment_Type
-#             self.task = SocialNavRandomTask(self)
-#             agent_segment.pose.pose, agent_segment.twist.twist = self.task.read_ped_next_pos(self)    #msg[agent_id-1].pose.pose         #TODO:data of human
-#             #agent_segment.twist.twist  #= msg[agent_id-1].twist.twist     #TODO:twist of human
-#             tracked_agent = TrackedAgent()     
-#             tracked_agent.type = AgentType.HUMAN
-#             tracked_agent.name = "human"+str(agent_id)
-#             tracked_agent.segments.append(agent_segment)
-#             tracked_agents.agents.append(tracked_agent)
-# #        if(tracked_agents.agents):
-# #            self.agents = tracked_agents
-# #            self.sig_1 = True
-
-#         #Add a publisher to publish the human torso pose and twist to ROS
-#         self.pedestrian_ros_bridge = rospy.Publisher("tracked_agents", TrackedAgents, queue_size=10)
-
-
-
 
         rospy.Subscriber("/mobile_base/commands/velocity", Twist, self.cmd_callback)
         rospy.Subscriber("/reset_pose", PoseStamped, self.tp_robot_callback)
@@ -221,6 +188,7 @@ class SimNode(object):
                 # print("num hum", self.num_hum)
 
                 linear, angular = self.env.task.pedestrians[-1].get_velocity(agent_id-1)
+                print(linear, angular)
 
                 self.p.x    = self.env.task.current_pos[0]
                 self.p.y    = self.env.task.current_pos[1]
@@ -238,11 +206,11 @@ class SimNode(object):
                 agent_segment.pose.pose.position.z = pos[2]  # self.env.task.current_pos[2]
                 quat = quaternion_from_euler(0,0,euler_orientation[2]-1.57)
 
-                print("old angles", self.env.task.orientation)
+                # print("old angles", self.env.task.orientation)
                 angles = euler_from_quaternion(orn)
-                print("new angles", angles)    
-                print(" old orientation", quat)            
-                print("orientation", orn)
+                # print("new angles", angles)    
+                # print(" old orientation", quat)            
+                # print("orientation", orn)
 
                 agent_segment.pose.pose.orientation.x = quat[0]
                 agent_segment.pose.pose.orientation.y = quat[1]

@@ -104,7 +104,6 @@ class Pedestrian(StatefulObject):
         #velocities = []
         #global human_body_id 
 
-        #print("print human_body_id", human_body_id)
         id = 3 + ped_id
         #for body_id in self.get_body_ids():
         lin, ang = p.getBaseVelocity(id) #(body_id)

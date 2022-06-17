@@ -112,7 +112,6 @@ class BaseObject(with_metaclass(ABCMeta, object)):
         """Get object position and orientation in the format of Tuple[Array[x, y, z], Array[x, y, z, w]]"""
         assert len(self.get_body_ids()) == 1, "Base implementation only works with single-body objects."
         pos, orn = p.getBasePositionAndOrientation(self.get_body_ids()[0])
-        print("check body id", self.get_body_ids()[0])
         return np.array(pos), np.array(orn)
 
     def set_position(self, pos):
